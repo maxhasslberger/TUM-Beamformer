@@ -9,20 +9,19 @@ fs_acq = 500;               % sampling frequency [Hz]
 Nacq_buff = 6;              % EOG acquisition buffer size
 
 % variables to be set
-runtime = 25;               % set here the runtime of the processing loop in seconds
+runtime = 41;               % set here the runtime of the processing loop in seconds
 plot_flag = 1;                % plot on = 1; off = 0;
 plot_freq = 5;             % Frequency of plotting [# of acquisition buffers]
 is_online = 0;              % online = 1; offline = 0;
 
 calibration_flag = 1;       % allow calibration with specified max_angle
 max_angle = 50;             % deg; for calibration (max angle occured)
-rec_angle_min = 1;          % deg; min angle to floor signal to 0
 rec_angle_max = 5;          % deg; max angle to floor signal to 0
 
 % set the paths for including an EOG (from Task 3) and a Calibration file
 % (from Task 6)
 offline_EOG_file = 'data_Clara_data.mat';
-%calib_file = 'Data/calibration2.mat';
+calib_file = 'EOG_calib.mat';
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Create gaze angle estimation file
 if ~exist('EOG_calib.mat', 'file')
@@ -35,12 +34,13 @@ end
 %% Initialize RT_EOG
 
 % write the variables needed for initialization to state
-state.rec_angle_min = rec_angle_min;
+
 state.rec_angle_max = rec_angle_max;
 state.fs = fs_acq;                
 state.Nacq_buff = Nacq_buff;              
 state.is_online = is_online;
 state.EOG_file = offline_EOG_file;      % give measurement data to RT_EOG.m
+state.calib_file = calib_file;
 
 [~,state] = RT_EOG('init',state);
 
@@ -75,7 +75,7 @@ init_ignore = 1.5; % s
 for fr_idx = 1:ceil(state.fs*runtime/state.Nacq_buff)
 %b = tic;
     state.fr_idx = fr_idx;
-    delta_prev = output.delta; % debug
+    %delta_prev = output.V_est; % debug
     [output,state] = RT_EOG('process',state);
     
     EOG_Vraw((fr_idx-1)*state.Nacq_buff + (1:state.Nacq_buff)) = output.V_raw;
@@ -90,7 +90,7 @@ for fr_idx = 1:ceil(state.fs*runtime/state.Nacq_buff)
     EOG_edge_idx((fr_idx-1)*state.Nacq_buff + (1:state.Nacq_buff)) = output.edge_idx;
     
     % Estimation
-    EOG_delta((fr_idx-1)*state.Nacq_buff + (1:state.Nacq_buff)) = output.delta;
+    EOG_delta((fr_idx-1)*state.Nacq_buff + (1:state.Nacq_buff)) = output.V_est;
     EOG_next_delta((fr_idx-1)*state.Nacq_buff + (1:state.Nacq_buff)) = output.next_delta;
     EOG_angle((fr_idx-1)*state.Nacq_buff + (1:state.Nacq_buff)) = output.angle;
 
@@ -206,6 +206,7 @@ plot(t , EOG_delta)
 plot(t , EOG_next_delta)
 % grid on;
 xlabel('Time (s)')
+legend('V_{LP}' , 'EOG edge idx -2' , 'EOG delta' , 'EOG next delta')
 
 figure;
 plot(t , EOG_delta)

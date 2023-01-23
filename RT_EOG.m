@@ -122,71 +122,82 @@ if strcmpi(cmd,'process')
     %% Task 5: Estimating the potential changes    
     
         % For each sample in the saccade edge sequence
-%         state.delta = 0.0;
+        % state.delta = 0.0;
         state.avg_buff = [state.avg_buff(state.Nacq_buff+1:end), output.V_LP]; % update avg buffer
         
         % 1. Detect the start of a saccade and count how many samples it
         %    takes
-        onset_id = find(output.edge_idx == 1, 1);
-        offset_id = find(output.edge_idx == -1, 1);
-            
+
+        % correct task: detect end of saccade and count samples until next
+        % one starts
+        onset_id = find(output.edge_idx == 1, 1); % returns index of saccade start in buffer
+        offset_id = find(output.edge_idx == -1, 1); % refurns index of saccade end in buffer
+        
+            % 1: case saccade end is detected and counting hasn't started already:
+            % 2: case no saccade start or end in buffer & counting started
+            % already:
+            % 3: case saccade start:
         if ~isempty(offset_id) && ~state.complete % upcounting
-            state.cnt = state.Nacq_buff - offset_id; % start counting
-            state.complete = 1;
+            state.cnt = state.Nacq_buff - offset_id; % start counting with elements after saccade end in buffer
+            state.complete = 1; % start further counting
         elseif isempty(onset_id) && isempty(offset_id) && state.complete
-            state.cnt = state.cnt + state.Nacq_buff; % proceed counting
+            state.cnt = state.cnt + state.Nacq_buff; % proceed counting, add whole buffer to amount of counted samples
         elseif ~isempty(onset_id)
-            state.cnt = state.cnt + onset_id; % final cnt
-            state.complete = 0;
+            state.cnt = state.cnt + onset_id; % final cnt, add samples until start is detected
+            state.complete = 0; % stop further counting
         end
         
         % 2. ignore sloppy saccades, reset the timer
-        if state.cnt < state.t_sloppy * state.fs && ~isempty(onset_id)
-            output.edge_idx = zeros(1, state.Nacq_buff);
+        if state.cnt < state.t_sloppy * state.fs && ~isempty(onset_id) % = sloppy
+            output.edge_idx = zeros(1, state.Nacq_buff); % delete saccade onset because sloppy
             state.cnt = 0; % reset
-            state.del_prev_edge = 1; %%%%%%%%%%%%%%%%%%%%%%%%%
+            state.del_prev_edge = 1; % flag to delete previous saccade end as well
         
         % 3. distinguish between rapid and normal saccades
-        elseif state.cnt < state.t_rapid * state.fs && ~isempty(onset_id)
+        elseif state.cnt < state.t_rapid * state.fs && ~isempty(onset_id) && state.first == 0 % = rapid
         % 4. for rapid saccades, the end potential of the current and the 
         %    start potential of the new saccade are the same, and should be
         %    determined via averaging over the number of available samples
-        discard_idx = state.cnt - state.t_sloppy * state.fs;
-        tmp = mean(state.avg_buff(discard_idx:end));
-        state.delta = state.delta + tmp - state.next_delta;
-        state.next_delta = tmp;
+        discard_idx = state.cnt - state.t_sloppy * state.fs; % compute which values of buffer to use for averaging as not full buffer can be used
+        tmp = mean(state.avg_buff(discard_idx:end)); % perform averaging
+        state.delta = state.delta + tmp - state.next_delta; % add potential difference of rapid saccade to overall potential estimate
+        state.next_delta = tmp; % starting potential for next saccade
         state.cnt = 0; % reset
         
         
-        elseif state.cnt >= state.t_rapid * state.fs && ~isempty(onset_id) % second
+        elseif (state.cnt >= state.t_rapid * state.fs && ~isempty(onset_id)) || (~isempty(onset_id) && state.first == 1) % normal saccade start, computed second as long as not first saccade
         % 5. for normal saccades, the start and end potentials should be
         %    retrieved via averaging over the Tavg previous samples,
         %    respectively
         state.next_delta = mean(state.avg_buff);
-        state.avg_once = 1;
+        state.avg_once = 1; % flag that start voltage of saccade is known
         state.cnt = 0; % reset
+        state.first = 0; % stop second condition of elseif from being true
         
-        elseif state.cnt >= state.t_rapid * state.fs && state.avg_once % first
-            state.delta = state.delta + mean(state.avg_buff) - state.next_delta;
+        elseif state.cnt >= state.t_rapid * state.fs && state.avg_once && state.first == 0 % normal saccade end, computed first
+            state.delta = state.delta + mean(state.avg_buff) - state.next_delta; % update abolute voltage estimate
             state.avg_once = 0;
         end
         
-        if state.fr_idx > 100
-            output.delta = state.delta;
-        else
-            output.delta = 0.0;
-            state.delta = 0.0;
-        end
+%         if state.fr_idx > 100
+%             output.V_est = state.delta;
+%         else
+%             output.V_est = 0.0;
+%             state.delta = 0.0;
+%         end
+
+        output.V_est = state.delta;
+
         output.next_delta = state.next_delta;
         output.del_prev_edge = state.del_prev_edge;
     
     %% Task 7: Auto recalibration
-    if abs(output.delta) > state.min_floor && abs(output.delta) < state.max_floor
-        output.delta = 0.0;
+    if abs(output.V_est) < state.max_floor
+        output.V_est = 0.0;
     end
     
     %% Task 6: Convert the potentials to gaze angles
-    output.angle = output.delta * state.EOG_Vest;
+    output.angle = output.V_est * state.EOG_Vgrad;
     
     %% Update All Save Buffers (All Tasks) HERE %%%%%%%%%%%%%%%%%%
     
@@ -241,8 +252,7 @@ elseif strcmpi(cmd,'init')
 
         % 2.
         state.saccade.threshold = 0.015;
-        % Experiment 2 needs a threshold of max 0.1, for Experiment 1 as
-        % well as the Clara file 0.2 worked better
+        % Experiment 2 needs a threshold of max 0.001, for Experiment 1 and 3 00.2, for the Clara file 0.015 worked better
 
         % 3. 
         % scalar to always store last value of previous iteration's
@@ -253,7 +263,7 @@ elseif strcmpi(cmd,'init')
         state.subbuff = zeros(1,1);
 
         % 4.
-        edgepause = 0.25;   % exclude first 0.25s
+        edgepause = 0.125;   % exclude first 0.25s
         state.pausebuff = round(edgepause * state.fs / state.Nacq_buff); % amount of buffers to be excluded
         state.exclude_i = 1; % initialize counter how many buffers were excluded already
     
@@ -261,16 +271,16 @@ elseif strcmpi(cmd,'init')
     
         % 1. the number of samples to wait after a saccade end has been
         %    detected to start the potential estimation
-        state.t_avg = 0.1; % s
-        state.t_sloppy = 0.2; % s
-        state.t_rapid = state.t_avg + state.t_sloppy;
-        state.cnt = 0; % samples to last saccade
-        state.complete = 0;
-        state.del_prev_edge = 0;
+        state.t_avg = 0.1; % s      % time required for averaging
+        state.t_sloppy = 0.2; % s       % threshold time for sloppy saccades
+        state.t_rapid = state.t_avg + state.t_sloppy;       % threshold time for rapid saccaddes
+        state.cnt = 0; % samples in last saccade
+        state.complete = 0; % 1 if counting is active already, 0 if not
+        state.del_prev_edge = 0; % flag to delete previous edge if sloppy saccade was registered
         
-        state.slop_Nbuff = ceil(state.t_sloppy * state.fs / state.Nacq_buff);
-        state.rapid_Nbuff = ceil(state.t_rapid * state.fs / state.Nacq_buff);
-        state.avg_Nbuff = ceil(state.t_avg * state.fs / state.Nacq_buff);
+        state.slop_Nbuff = ceil(state.t_sloppy * state.fs / state.Nacq_buff); % threshold amount of buffers for sloppy saccade
+        state.rapid_Nbuff = ceil(state.t_rapid * state.fs / state.Nacq_buff); % threshold amount of buffers for rapid saccade
+        state.avg_Nbuff = ceil(state.t_avg * state.fs / state.Nacq_buff); % amount of buffers for normal averaging
         
         % 2. the minimum number of samples the eye needs to be stationary,
         %    such that no sloppy saccade is detected
@@ -284,33 +294,34 @@ elseif strcmpi(cmd,'init')
         %    before moving, such that no rapid succession saccade is detected
         % 5. the timer triggered once a saccade end has been detected
         % 6. the start and the end potential of the current saccade
+        state.first = 1;        % capture voltage at first saccade start
+
         % 7. the EOG estimate
-        state.next_delta = 0;
-        state.delta = 0;
+        state.next_delta = 0;           % potential at saccade start for delta computations
+        state.delta = 0;                % overall potential estimate where deltas are added up
+
         % 8. a buffer of length Tavg (rounded up to the next multiple of
         %    Nacq_buff)
         state.avg_buff = zeros(1, state.Navg);
         
-        state.avg_once = 1;
+        state.avg_once = 1;  % flag that start voltage of saccade is known
         state.del_prev_edge = 0;
     
     %% Task 6: Calibration gradient
     
         % 1. load voltage-to-gaze-angle calibration file
         % 2. save calibration gradient to state structure
-        calib = load('EOG_calib.mat').calib;
-        state.EOG_Vest = calib.gradient;
+        calib = load(state.calib_file).calib;
+        state.EOG_Vgrad = calib.gradient;
     
     %% Task 7: Parameters for auto-recalibration
     
         % 1. the minimum angle estimate that should be rounded to 0
         % 2. the maximum angle estimate that should be rounded to 0
         % 3. calculate the potential estimate for both
-        if state.EOG_Vest ~= 0.0
-            state.max_floor = state.rec_angle_max / state.EOG_Vest;
-            state.min_floor = state.rec_angle_min / state.EOG_Vest;
+        if state.EOG_Vgrad ~= 0.0
+            state.max_floor = state.rec_angle_max / state.EOG_Vgrad;
         else
-            state.min_floor = 0.0;
             state.max_floor = 0.0;
         end
     
