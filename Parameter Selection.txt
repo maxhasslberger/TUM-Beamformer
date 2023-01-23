@@ -1,5 +1,5 @@
 Seq_1: runtime = 41s; threshold = 0.002
-Seq_2: runtime = 70s; threshold = 0.002
+Seq_3: runtime = 70s; threshold = 0.002
 Clara_data: runtime = 25; threshold = 0.015
 
 --------------------------------------

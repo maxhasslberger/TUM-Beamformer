@@ -193,7 +193,7 @@ if strcmpi(cmd,'process')
     
     %% Task 7: Auto recalibration
     if abs(output.V_est) < state.max_floor
-        output.V_est = 0.0;
+        state.delta = 0.0;
     end
     
     %% Task 6: Convert the potentials to gaze angles
@@ -251,8 +251,8 @@ elseif strcmpi(cmd,'init')
         state.movmeanfilt.zf = zeros(1 , max(length(state.movmeanfilt.a),length(state.movmeanfilt.b))-1);     % initial filter conditions of rRT processing
 
         % 2.
-        state.saccade.threshold = 0.015;
-        % Experiment 2 needs a threshold of max 0.001, for Experiment 1 and 3 00.2, for the Clara file 0.015 worked better
+        state.saccade.threshold = 0.002;
+        % Experiment 2 needs a threshold of max 0.001, for Experiment 1 and 3 0.002, for the Clara file 0.015 worked better
 
         % 3. 
         % scalar to always store last value of previous iteration's

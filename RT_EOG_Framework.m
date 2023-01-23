@@ -9,18 +9,18 @@ fs_acq = 500;               % sampling frequency [Hz]
 Nacq_buff = 6;              % EOG acquisition buffer size
 
 % variables to be set
-runtime = 41;               % set here the runtime of the processing loop in seconds
+runtime = 70;               % set here the runtime of the processing loop in seconds
 plot_flag = 1;                % plot on = 1; off = 0;
 plot_freq = 5;             % Frequency of plotting [# of acquisition buffers]
 is_online = 0;              % online = 1; offline = 0;
 
 calibration_flag = 1;       % allow calibration with specified max_angle
-max_angle = 50;             % deg; for calibration (max angle occured)
+max_angle = 45;             % deg; for calibration (max angle occured)
 rec_angle_max = 5;          % deg; max angle to floor signal to 0
 
 % set the paths for including an EOG (from Task 3) and a Calibration file
 % (from Task 6)
-offline_EOG_file = 'data_Clara_data.mat';
+offline_EOG_file = 'seq_3_data.mat';
 calib_file = 'EOG_calib.mat';
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Create gaze angle estimation file
