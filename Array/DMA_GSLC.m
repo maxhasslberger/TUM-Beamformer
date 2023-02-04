@@ -98,8 +98,8 @@ classdef DMA_GSLC < handle
             % return number of input channels
             % No changes needed
             % input here number of channels
-%             output = -1; % arbitrary number of input channels
-            output = 2; % arbitrary number of input channels
+            output = -1; % arbitrary number of input channels
+%             output = 2; % arbitrary number of input channels
         end        
         % get parameter names
         function output = getparamnames(plugin)

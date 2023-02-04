@@ -12,6 +12,7 @@ initdata.c = 344; % m/s
 
  
 % playdata = offline_sample_processing(sample, algo, initdata);
+aPR = init_aPR(512);
 playdata = realtime_processing(aPR, 10, algo, initdata);
 
 % sound(playdata(1:500000, :), 44100)
