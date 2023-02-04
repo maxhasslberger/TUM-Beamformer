@@ -42,7 +42,7 @@ classdef DMA_GSLC < handle
 
             % Give delayed inputs to GSLC_process_2ChansDelayed
             [proc_buf, plugin.state.gslc_coeff] = GSLC_process_2ChansDelayed(mic_proc , plugin.state.gslc_coeff, ...
-                param(2), delay_n, plugin.state.d, plugin.state.fs, plugin.state.c);
+                plugin.state.angle, delay_n, plugin.state.d, plugin.state.fs, plugin.state.c);
             
             % update save buffer and copy signal to second output channel
             plugin.state.save_buf = input_ext(1 + sz : end, :);
