@@ -9,7 +9,7 @@ time = 1000; % in seconds, duration of realtime processing
 % g = [6.78e-6 4.78e-6]; % microphone gains, can be loaded to code, but need to correspond with this format
 g = [1 1];
 
-algo = dB_panning; % to select beamformer implementation: delay_and_sum (Task 1), differential_microphone_array (Task 2), or generalized_sidelobe_canceller (Task 3)
+algo = DMA_GSLC; % to select beamformer implementation: delay_and_sum (Task 1), differential_microphone_array (Task 2), or generalized_sidelobe_canceller (Task 3)
 
 initdata.BufferSize = 512; % initialize buffersize
 
