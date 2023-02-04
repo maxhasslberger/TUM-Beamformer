@@ -198,8 +198,6 @@ if strcmpi(cmd,'process')
     
     %% Task 6: Convert the potentials to gaze angles
     output.angle = output.V_est * state.EOG_Vgrad;
-    eog_angle = output.angle
-    save('../Array/Angle_transfer.mat', 'eog_angle');
     
     %% Update All Save Buffers (All Tasks) HERE %%%%%%%%%%%%%%%%%%
     
@@ -253,7 +251,7 @@ elseif strcmpi(cmd,'init')
         state.movmeanfilt.zf = zeros(1 , max(length(state.movmeanfilt.a),length(state.movmeanfilt.b))-1);     % initial filter conditions of rRT processing
 
         % 2.
-        state.saccade.threshold = 0.0035;
+        state.saccade.threshold = 0.002;
         % Experiment 2 needs a threshold of max 0.001, for Experiment 1 and 3 0.002, for the Clara file 0.015 worked better
 
         % 3. 

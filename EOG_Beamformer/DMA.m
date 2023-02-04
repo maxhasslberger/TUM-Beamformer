@@ -1,4 +1,4 @@
-classdef dB_panning < handle
+classdef DMA < handle
     properties
         % initialize state structure
         state = struct();
@@ -16,15 +16,36 @@ classdef dB_panning < handle
             % calculate output from input, state, and param
             % to have access to saved additional parameters (e.g. var) in 
             % state type in var = plugin.state.x;
+            
+            % Preamplify input signal
+            input = input ./ plugin.state.id.g;
 
-            % Apply gain
-            try
-            plugin.state.angle = load('Angle_transfer.mat').eog_angle / 10;
-            end
-            plugin.state.angle
-            gain = [10^(-param(1)/20), 10^(param(1)/20)];
+            % Prefilter input signal
+            %[input , plugin.state.zf] = filter(plugin.state.b , plugin.state.a , input , plugin.state.zf);
 
-            proc_buf = gain .* input; 
+            % Compute delay samples + distant microphone
+            delay_n = round(plugin.state.fs * plugin.state.delay(param(2)));
+
+
+            mic_idx = delay_n > 0.0; % Delay mic 2, if delay positive
+            delay_n = abs(delay_n);
+            
+            % Compute DMA
+            input_ext = [plugin.state.save_buf; input]; % update buffer
+            sz = size(input, 1);
+
+            mic_proc(: , 2-mic_idx) = input(:, 2-mic_idx); % undelayed
+            mic_proc(:, 1+mic_idx) = input_ext(end-delay_n - sz+1 : end-delay_n, mic_idx+1); % delayed
+            dma_out = mic_proc(: , 1) - mic_proc(: , 2);
+
+            proc_buf = dma_out; % output result
+            
+            % update save buffer and copy signal to second output channel
+            plugin.state.save_buf = input_ext(1 + sz : end, :);
+            proc_buf = repmat(proc_buf, 1, size(input, 2));
+            
+            
+            
             
             % update state
             % e.g. plugin.state.x = plugin.state.x + 1;
@@ -37,11 +58,24 @@ classdef dB_panning < handle
             % generate a default state and return it
             % e.g. plugin.state.BufferSize = initdata.pagesize;
             % THINK OF IMPLEMENTING THE DELAYLINE FORMULAR EQ. 1 P. 31
-            plugin.state.initdata = initdata.initdata;
+            plugin.state.id = initdata.initdata;
             plugin.state.fs = initdata.fs;
             plugin.state.BufferSize = initdata.pagesize;
             plugin.output = zeros(plugin.state.BufferSize, 2);
-            plugin.state.angle = 0;
+            
+            % based on 2 mics
+            plugin.state.delay = @(phi)plugin.state.id.d / plugin.state.id.c * sin(phi/180*pi);
+            plugin.state.save_buf = zeros(ceil(initdata.fs * plugin.state.id.d / plugin.state.id.c), 2);
+            
+            % Init filter param
+%              butter_fc = 1500;
+%             [plugin.state.b , plugin.state.a] = butter(2 , butter_fc / (initdata.fs / 2), 'low');
+%             butter_fc = 4000;
+%             [plugin.state.b , plugin.state.a] = butter(2 , butter_fc / (initdata.fs / 2), 'high');
+%             butter_fc = [1500, 4000];
+%             [plugin.state.b , plugin.state.a] = butter(2 , butter_fc / (initdata.fs / 2), 'bandpass');
+            
+%            plugin.state.zf = zeros(1 , max(length(plugin.state.a),length(plugin.state.b))-1);
         end
         % get number of input channels
         function output = getnuminchan(plugin)
@@ -63,14 +97,14 @@ classdef dB_panning < handle
             % Provides labels for the slider bars controlling each parameter -
             % One slider bar for each parameter
             % Should have same number of elements as 'getparamranges'
-            output = {'gain'};
+            output = {'gain', 'angle'};
         end
         % get parameter range
         function output = getparamranges(plugin)
             % return a cell array with parameter ranges
             % Set the min and max values of the slider bar of each parameter
             % Should have same number of elements as 'getparamnames'
-            output = {[-5,5]};
+            output = {[-5,5], [-90,90]};
         end
     end
 end

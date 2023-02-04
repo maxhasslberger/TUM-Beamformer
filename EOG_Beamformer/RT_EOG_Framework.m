@@ -12,9 +12,9 @@ Nacq_buff = 6;              % EOG acquisition buffer size
 runtime = 1000;               % set here the runtime of the processing loop in seconds
 plot_flag = 1;                % plot on = 1; off = 0;
 plot_freq = 5;             % Frequency of plotting [# of acquisition buffers]
-is_online = 1;              % online = 1; offline = 0;
+is_online = 0;              % online = 1; offline = 0;
 
-calibration_flag = 0;       % allow calibration with specified max_angle
+calibration_flag = 1;       % allow calibration with specified max_angle
 max_angle = 45;             % deg; for calibration (max angle occured)
 rec_angle_max = 5;          % deg; max angle to floor signal to 0
 
@@ -93,6 +93,8 @@ for fr_idx = 1:ceil(state.fs*runtime/state.Nacq_buff)
     EOG_delta((fr_idx-1)*state.Nacq_buff + (1:state.Nacq_buff)) = output.V_est;
     EOG_next_delta((fr_idx-1)*state.Nacq_buff + (1:state.Nacq_buff)) = output.next_delta;
     EOG_angle((fr_idx-1)*state.Nacq_buff + (1:state.Nacq_buff)) = output.angle;
+    
+    save('Angle_transfer.mat', EOG_angle(end));
 
     %% Plotting Routine 2/2======================================================
     

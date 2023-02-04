@@ -18,10 +18,6 @@ classdef dB_panning < handle
             % state type in var = plugin.state.x;
 
             % Apply gain
-            try
-            plugin.state.angle = load('Angle_transfer.mat').eog_angle / 10;
-            end
-            plugin.state.angle
             gain = [10^(-param(1)/20), 10^(param(1)/20)];
 
             proc_buf = gain .* input; 
@@ -41,7 +37,6 @@ classdef dB_panning < handle
             plugin.state.fs = initdata.fs;
             plugin.state.BufferSize = initdata.pagesize;
             plugin.output = zeros(plugin.state.BufferSize, 2);
-            plugin.state.angle = 0;
         end
         % get number of input channels
         function output = getnuminchan(plugin)
